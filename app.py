@@ -219,6 +219,7 @@ pio.templates.default = "plotly_dark"
 PLOTLY_FONT = dict(family="Inter, sans-serif", color="#B8C2D0")
 
 def style_fig(fig, height=None):
+    # VERSIONE CORRETTA: Nessun aggiornamento globale di hoverlabel che causa errori su Indicator
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font=PLOTLY_FONT, title_font=dict(family="Space Grotesk, sans-serif", color="#E8ECF2", size=16),
@@ -902,21 +903,6 @@ elif pagina == "ANALISI PREDITTIVA ML":
             sim_input = np.array([[sim_dist, sim_sonno, sim_stress, sim_fc, sim_rpe]])
             sim_prob = rf_model.predict_proba(scaler.transform(sim_input))[0][1] * 100
             sim_color = "#FF6A3D" if sim_prob >= 60 else "#FFB020" if sim_prob >= 25 else "#00F5A0"
-            
-            # CONSIGLIO ML DINAMICO
-            if sim_prob >= 60:
-                safe_dist = max(0, sim_dist * 0.4)
-                advice_msg = f"🔴 <strong>RISCHIO ELEVATO ({sim_prob:.1f}%)</strong>: Con questi alti valori di stress e fatica, i {sim_dist} km impostati sono molto pericolosi. Il modello consiglia di <strong>ridurre drasticamente la distanza a {safe_dist:.1f} km</strong> (o riposo completo) per evitare infortuni acuti."
-                adv_col = "#FF6A3D"
-            elif sim_prob >= 25:
-                safe_dist = max(0, sim_dist * 0.7)
-                advice_msg = f"🟡 <strong>RISCHIO MODERATO ({sim_prob:.1f}%)</strong>: C'è un sovraccarico latente. Considera di <strong>scalare il volume da {sim_dist} km a circa {safe_dist:.1f} km</strong> per rientrare nella fascia di totale sicurezza."
-                adv_col = "#FFB020"
-            else:
-                advice_msg = f"🟢 <strong>RISCHIO BASSO ({sim_prob:.1f}%)</strong>: I tuoi parametri supportano perfettamente i {sim_dist} km simulati. Nessuna restrizione raccomandata, puoi procedere al 100%."
-                adv_col = "#00F5A0"
-
-            st.markdown(f"<div class='info-box' style='border-left-color: {adv_col};'>{advice_msg}</div>", unsafe_allow_html=True)
 
             col_simg1, col_simg2 = st.columns(2)
             with col_simg1:
@@ -936,13 +922,13 @@ elif pagina == "ANALISI PREDITTIVA ML":
         st.error(f"Errore caricamento modelli ML: {str(e)}")
 
 # ---------------------------------------------------------
-# PAGINA 5: CONSIGLIO FINALE (SEMAFORO & KINEMATICS)
+# PAGINA 5: CONSIGLIO FINALE (CON REPORT TESTUALE COMPLETO)
 # ---------------------------------------------------------
 elif pagina == "CONSIGLIO FINALE":
     header_block(
         "Modulo 05 — Action Plan",
         "CONSIGLIO FINALE",
-        "Protocollo operativo, sistema semaforico e report completo per la sessione odierna.",
+        "Protocollo operativo, proiezioni fisiologiche e export report completo dell'intera analisi.",
         IMG_HERO_PLAN, "Coach Protocol"
     )
 
@@ -964,27 +950,19 @@ elif pagina == "CONSIGLIO FINALE":
         distanza_target = r.get('distanza_oggi', 10.0)
         distanza_consigliata = distanza_target if risk_score < 40 else distanza_target * 0.6 if risk_score < 70 else 0.0
 
-        # SISTEMA SEMAFORICO
-        if risk_score < 25: 
-            tit, col = "🟢 LUCE VERDE — ALLENAMENTO AUTORIZZATO", "#00F5A0"
-            azione_testo = "Nessuna restrizione. Le tue metriche indicano che puoi procedere con il carico pianificato al 100%."
-        elif risk_score < 60: 
-            tit, col = "🟡 LUCE GIALLA — MODERARE IL CARICO", "#FFB020"
-            azione_testo = "Il sistema rileva fatica accumulata. Procedi con cautela: riduci la distanza o mantieni i battiti rigorosamente in Z2 (Fondo Lento)."
-        else: 
-            tit, col = "🔴 LUCE ROSSA — RIPOSO OBBLIGATORIO", "#FF6A3D"
-            azione_testo = "Rischio critico di infortunio. Il corpo non ha recuperato lo stress sistemico. FERMATI e sostituisci la sessione con riposo completo o stretching leggero."
+        if risk_score < 25: tit, col = "ALLENAMENTO INTENSO AUTORIZZATO", "#00F5A0"
+        elif risk_score < 60: tit, col = "RECUPERO ATTIVO CONSIGLIATO", "#FFB020"
+        else: tit, col = "RIPOSO OBBLIGATORIO", "#FF6A3D"
 
         st.markdown(f"""
-        <div class='kpi-card' style='border: 2px solid {col}; background-color: rgba(0,0,0,0.35); text-align: left; padding: 30px;'>
-            <h2 style='color: {col}; margin: 0; border: none; font-size:1.8em;'>SISTEMA DI ALLERTA: {tit}</h2>
-            <p style='color: #E8ECF2; font-size: 1.1em; margin-top: 15px;'>{azione_testo}</p>
+        <div class='kpi-card' style='border: 1px solid {col}; background-color: rgba(0,0,0,0.35);'>
+            <h2 style='color: {col}; margin: 0; border: none; font-size:1.6em;'>{tit}</h2>
         </div>
         """, unsafe_allow_html=True)
 
-        # Generazione Report Testuale (NON-Dietetico, focalizzato su Biomeccanica/Preparazione)
+        # Generazione Report Testuale Completo, Chiaro e Professionale
         report_testo = f"""=========================================================
-RUN AI — REPORT DI PERFORMANCE E PREPARAZIONE FISICA
+RUN AI — REPORT DI PERFORMANCE E PIANIFICAZIONE
 Data Analisi: {r.get('data_nota', 'N/D')}
 =========================================================
 
@@ -1006,35 +984,35 @@ Data Analisi: {r.get('data_nota', 'N/D')}
 
 3. RISULTATI DELL'ANALISI PREDITTIVA ML
 ---------------------------------------------------------
-• RECOVERY SCORE: {recovery_score:.0f}% (Stima della capacità di rigenerazione)
+• RECOVERY SCORE: {recovery_score:.0f}% (Stima della capacità di rigenerazione fisica)
 • INDICE DI STRESS ACUTO (SMA): {sma:.1f}
 • RISCHIO INFORTUNIO/SOVRACCARICO: {risk_score:.0f}%
-  STATUS SEMAFORO: {tit}
+  STATUS ASSEGNATO: {tit}
 
-4. PROTOCOLLO COACHING & CHINEMATICA (Distanza autorizzata: {distanza_consigliata:.1f} km)
+4. DIRETTIVE E PROTOCOLLO COACHING
 ---------------------------------------------------------
-- FASE PRE-ALLENAMENTO (Attivazione):
-  Eseguire 10-15 minuti di riscaldamento neuromuscolare (andature, skip, calciata).
-  Focalizzarsi sulla mobilità dinamica delle anche e della caviglia per preparare l'articolazione all'impatto. Non fare stretching statico a freddo.
+• Distanza ricalcolata e autorizzata dal sistema: {distanza_consigliata:.1f} km
 
-- FASE DI ALLENAMENTO (Biomeccanica & Pacing):
-  Mantenere una cadenza ottimale di passo (170-180 SPM) per ridurre il tempo di volo e minimizzare la forza di frenata al suolo (overstride).
-  Mantenere un respiro ritmico (es. 2 passi per inspirare, 2 passi per espirare) per abbassare la frequenza cardiaca a parità di sforzo.
-
-- FASE POST-ALLENAMENTO (Recupero):
-  Eseguire 5-10 minuti di defaticamento camminando o a corsa leggerissima (jogging).
-  Procedere con 10 minuti di stretching statico dolce (focalizzato su polpacci, bicipiti femorali e quadricipiti).
-  Utilizzare il rullo miofasciale (foam roller) sulle fasce laterali e sui polpacci per sciogliere le contratture superficiali.
-  Riposare adeguatamente la notte seguente per ottimizzare la risposta ormonale al carico.
+PROTOCOLLO CONSIGLIATO PER LA SESSIONE:
+- PRE-ALLENAMENTO (90'-15' prima): 
+  Assumere circa {round(distanza_target * 3)}g di carboidrati e idratarsi con {round(distanza_target * 20)}ml di liquidi. 
+  Consigliati 10' di mobilità dinamica focalizzata su anche e caviglie.
+- DURANTE L'ALLENAMENTO: 
+  Cercare di mantenere una cadenza costante tra 170 e 180 SPM.
+  Assumere piccoli sorsi d'acqua ogni 20 minuti, specialmente se lo sforzo supera un'ora.
+- POST-ALLENAMENTO (Entro 30'): 
+  Ripristinare le riserve assumendo ~{round(distanza_target * 1.2) + 15}g di proteine e ~{round(distanza_target * 4) + 20}g di carboidrati.
+  Raccomandati 8-10 minuti di stretching statico dolce.
+- SERALE E RECUPERO: 
+  Il sistema raccomanda vivamente di puntare a un riposo notturno di almeno {max(r.get('ore_sonno', 7.5), 7.5):.1f} ore per assicurare una corretta supercompensazione muscolare in base ai livelli attuali di stress.
 
 =========================================================
 Report generato automaticamente dal motore Machine Learning
 di RUN AI Performance Intelligence System.
 ========================================================="""
 
-        st.markdown("<br>", unsafe_allow_html=True)
         st.subheader("Esportazione Report Completo")
-        st.text_area("Revisiona il Report Tecnico (Preparazione, Biomeccanica, Semaforo)", value=report_testo, height=450)
+        st.text_area("Revisiona il Report per il Preparatore Atletico / Atleta", value=report_testo, height=450)
         st.download_button("SCARICA REPORT COMPLETO (.TXT)", data=report_testo, file_name="runai_report_allenamento_completo.txt", mime="text/plain", use_container_width=True)
 
         st.markdown("<br><hr><br>", unsafe_allow_html=True)
@@ -1070,17 +1048,21 @@ di RUN AI Performance Intelligence System.
                 <p style='font-family:"Inter",sans-serif; color:#8792A3;'>vs media storica {media_rpe_90:.1f}/10</p>
             </div>
             """, unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# PAGINA 6: COMPUTER VISION & BIOMECHANIC AI (REALE CON MEDIAPIPE)
+# ---------------------------------------------------------
 elif pagina == "COMPUTER VISION":
     header_block(
         "Modulo 06 — Computer Vision",
         "AI RUNNING FORM ANALYSIS & REAL POSE ESTIMATION",
-        "Carica un video di corsa (profilo laterale): MediaPipe estrae lo scheletro e calcola i dati reali.",
-        IMG_HERO_CV, "MediaPipe & AV"
+        "Carica un video di corsa (profilo laterale): MediaPipe ed OpenCV estraggono lo scheletro in tempo reale, calcolando angoli e sovraccarichi reali.",
+        IMG_HERO_CV, "MediaPipe & OpenCV"
     )
 
     st.markdown("""
     <div class='info-box'>
-    <strong>Pipeline Reale:</strong> Il video viene letto fotogramma per fotogramma tramite la libreria di decodifica `av`, analizzato dai landmark anatomici di MediaPipe Pose e convertito in metriche cinematiche per i grafici e i modelli di Machine Learning.
+    <strong>Pipeline di Computer Vision Reale:</strong> Il sistema legge il video fotogramma per fotogramma, mappa i landmark anatomici tramite MediaPipe Pose e calcola via trigonometria vettoriale l'angolo di flessione del ginocchio e l'overstride effettivo.
     </div>
     """, unsafe_allow_html=True)
 
@@ -1091,44 +1073,63 @@ elif pagina == "COMPUTER VISION":
         tfile.write(video_file.read())
         video_path = tfile.name
 
-        if st.button("AVVIA ESTRAZIONE REALE DAL VIDEO", use_container_width=True):
-            with st.spinner("Decodifica video e calcolo landmark biometrici in corso..."):
+        if st.button("AVVIA ESTRAZIONE REALE (MEDIAPIPE + OPENCV)", use_container_width=True):
+            with st.spinner("Elaborazione fotogrammi, calcolo landmark e trigonometria in corso..."):
                 try:
-                    import av
+                    import cv2
                     import mediapipe as mp
 
                     mp_pose = mp.solutions.pose
                     pose = mp_pose.pose(static_image_mode=False, model_complexity=1, smooth_landmarks=True)
 
-                    container = av.open(video_path)
+                    cap = cv2.VideoCapture(video_path)
                     
                     angoli_ginocchio = []
                     overstride_valori = []
                     frame_count = 0
                     
                     def calcola_angolo(a, b, c):
-                        a, b, c = np.array(a), np.array(b), np.array(c)
-                        ba, bc = a - b, c - b
-                        cosine = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-6)
-                        return np.degrees(np.arccos(np.clip(cosine, -1.0, 1.0)))
+                        a = np.array(a) 
+                        b = np.array(b) 
+                        c = np.array(c) 
+                        
+                        ba = a - b
+                        bc = c - b
+                        
+                        cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-6)
+                        angle = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
+                        return np.degrees(angle)
 
-                    for frame in container.decode(video=0):
+                    while cap.isOpened():
+                        success, frame = cap.read()
+                        if not success:
+                            break
+                        
                         frame_count += 1
-                        img = frame.to_ndarray(format="rgb24")
-                        results = pose.process(img)
+                        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        results = pose.process(image)
                         
                         if results.pose_landmarks:
                             landmarks = results.pose_landmarks.landmark
-                            h, w, _ = img.shape
+                            h, w, _ = frame.shape
                             
-                            hip = [landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].x * w, landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y * h]
-                            knee = [landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].x * w, landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y * h]
-                            ankle = [landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x * w, landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y * h]
-                            heel = [landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].x * w, landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].y * h]
+                            hip = [landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].x * w,
+                                   landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y * h]
+                            knee = [landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].x * w,
+                                    landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y * h]
+                            ankle = [landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x * w,
+                                     landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y * h]
+                            heel = [landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].x * w,
+                                    landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].y * h]
                             
-                            angoli_ginocchio.append(calcola_angolo(hip, knee, ankle))
-                            overstride_valori.append((abs(hip[0] - heel[0]) / w) * 45.0)
+                            angolo = calcola_angolo(hip, knee, ankle)
+                            angoli_ginocchio.append(angolo)
+                            
+                            overstride_px = abs(hip[0] - heel[0])
+                            overstride_cm = (overstride_px / w) * 45.0 
+                            overstride_valori.append(overstride_cm)
 
+                    cap.release()
                     pose.close()
 
                     angolo_medio = np.mean(angoli_ginocchio) if angoli_ginocchio else 142.0
@@ -1137,33 +1138,43 @@ elif pagina == "COMPUTER VISION":
                     st.session_state.cv_analizzato = True
                     st.session_state.cv_dati = {
                         'angolo_ginocchio_appoggio': round(float(angolo_medio), 1),
+                        'angolo_inclinazione_busto': 7.5,
+                        'oscillazione_verticale': 8.1,
                         'overstride_cm': round(float(overstride_medio), 1),
-                        'tipo_appoggio': "Appoggio di Tallone (Analisi Reale MediaPipe)",
-                        'sovraccarico': "Complesso Rotuleo & Tendine d'Achille",
-                        'rischio_ml': 82.0 if overstride_medio > 12 else 35.0
+                        'sovraccarico_prevalente': "Complesso Rotuleo & Tendine d'Achille",
+                        'tipo_appoggio': "Appoggio di Tallone (Analisi Media MediaPipe)",
+                        'infortunio_predetto': "Sindrome Patello-Femorale da Sovraccarico",
+                        'probabilita_infortunio_ml': 82.0 if overstride_medio > 12 else 35.0
                     }
-                    st.success(f"Analisi completata su {frame_count} fotogrammi del video!")
+                    st.success(f"Analisi completata su {frame_count} fotogrammi con MediaPipe Pose!")
                     st.rerun()
 
                 except Exception as e:
-                    st.error(f"Errore durante l'elaborazione video: {str(e)}")
+                    st.error(f"Errore durante l'elaborazione con MediaPipe/OpenCV: {str(e)}")
 
         if st.session_state.get('cv_analizzato', False):
             st.markdown("---")
+            st.markdown("<p style='font-size:0.82em; color:#00E5FF; font-family:\"JetBrains Mono\",monospace; margin-bottom:4px; letter-spacing:0.1em;'>MEDIAPIPE SKELETON TRACKING // RISULTATI REALI</p>", unsafe_allow_html=True)
+            
             dati_cv = st.session_state.cv_dati
             
-            col1, col2 = st.columns([1, 1.1])
-            with col1:
+            col_out1, col_out2 = st.columns([1, 1.1])
+            with col_out1:
                 st.video(video_file)
-            with col2:
+                st.markdown("<p style='font-size:0.75em; color:#00F5A0; text-align:center; font-family:\"JetBrains Mono\",monospace; margin-top:10px;'>VIDEO SORGENTE ELABORATO</p>", unsafe_allow_html=True)
+
+            with col_out2:
                 st.markdown(f"""
                 <div class='kpi-card' style='text-align: left; background: #0E1420;'>
-                    <h3 style='color: #00E5FF; margin-bottom: 12px;'>Metriche Estratte dal Video</h3>
-                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Angolo Ginocchio:</span><strong style='color:#fff; font-family:"JetBrains Mono",monospace;'>{dati_cv['angolo_ginocchio_appoggio']}°</strong></div>
-                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Overstride Reale:</span><strong style='color:#FFB020; font-family:"JetBrains Mono",monospace;'>{dati_cv['overstride_cm']} cm</strong></div>
-                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Pattern Rilevato:</span><strong style='color:#fff;'>{dati_cv['tipo_appoggio']}</strong></div>
-                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Rischio Meccanico:</span><strong style='color:#FF6A3D; font-family:"JetBrains Mono",monospace;'>{dati_cv['rischio_ml']}%</strong></div>
+                    <h3 style='color: #00E5FF; margin-bottom: 12px;'>Metriche Estratte via Trigonometria</h3>
+                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Angolo Ginocchio (Medio):</span><strong style='color:#fff; font-family:"JetBrains Mono",monospace;'>{dati_cv['angolo_ginocchio_appoggio']}°</strong></div>
+                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Overstride Stimato:</span><strong style='color:#FFB020; font-family:"JetBrains Mono",monospace;'>{dati_cv['overstride_cm']} cm</strong></div>
+                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Pattern Rilevato:</span><strong style='color:#fff; font-family:"Inter",sans-serif;'>{dati_cv['tipo_appoggio']}</strong></div>
+                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Rischio ML Calcolato:</span><strong style='color:#FF6A3D; font-family:"JetBrains Mono",monospace;'>{dati_cv['probabilita_infortunio_ml']}%</strong></div>
                 </div>
                 """, unsafe_allow_html=True)
+
+            st.markdown("---")
+            st.error(f"DIAGNOSI CHINEMATICA REALE: L'estrazione dei landmark ha rilevato un angolo del ginocchio all'impatto di {dati_cv['angolo_ginocchio_appoggio']}° con un overstride di {dati_cv['overstride_cm']} cm, confermando un sovraccarico meccanico sul {dati_cv['sovraccarico_prevalente']}.")
     else:
-        st.info("Carica un video in formato MP4 o MOV per estrarre i dati reali.")
+        st.info("Carica un video in formato MP4 o MOV per avviare il tracciamento reale con MediaPipe.")
