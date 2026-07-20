@@ -1,4 +1,3 @@
 streamlit
-numpy<2
-opencv-python-headless
-mediapipe
+numpy
+mediapipe==0.9.1
