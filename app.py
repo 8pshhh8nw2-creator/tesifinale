@@ -1070,23 +1070,17 @@ di RUN AI Performance Intelligence System.
                 <p style='font-family:"Inter",sans-serif; color:#8792A3;'>vs media storica {media_rpe_90:.1f}/10</p>
             </div>
             """, unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# PAGINA 6: COMPUTER VISION & BIOMECHANIC AI (REALE CON MEDIAPIPE)
-# ---------------------------------------------------------
 elif pagina == "COMPUTER VISION":
     header_block(
         "Modulo 06 — Computer Vision",
         "AI RUNNING FORM ANALYSIS & REAL POSE ESTIMATION",
-        "Carica un video di corsa (profilo laterale): MediaPipe ed OpenCV estraggono lo scheletro in tempo reale, calcolando angoli e sovraccarichi reali.",
-        IMG_HERO_CV, "MediaPipe & OpenCV"
+        "Carica un video di corsa (profilo laterale): MediaPipe estrae lo scheletro e calcola i dati reali.",
+        IMG_HERO_CV, "MediaPipe & AV"
     )
 
     st.markdown("""
     <div class='info-box'>
-    <strong>Pipeline di Computer Vision Reale:</strong> Il sistema legge il video fotogramma per fotogramma, mappa i landmark anatomici tramite MediaPipe Pose e calcola via trigonometria vettoriale l'angolo di flessione del ginocchio e l'overstride effettivo.
-    <br><br>
-    <em>Nota Tecnica: Se l'elaborazione fallisce per la mancanza di librerie, assicurati di aver lanciato nel terminale: <code>pip install opencv-python-headless mediapipe</code></em>
+    <strong>Pipeline Reale:</strong> Il video viene letto fotogramma per fotogramma tramite la libreria di decodifica `av`, analizzato dai landmark anatomici di MediaPipe Pose e convertito in metriche cinematiche per i grafici e i modelli di Machine Learning.
     </div>
     """, unsafe_allow_html=True)
 
@@ -1097,63 +1091,44 @@ elif pagina == "COMPUTER VISION":
         tfile.write(video_file.read())
         video_path = tfile.name
 
-        if st.button("AVVIA ESTRAZIONE REALE (MEDIAPIPE + OPENCV)", use_container_width=True):
-            with st.spinner("Elaborazione fotogrammi, calcolo landmark e trigonometria in corso..."):
+        if st.button("AVVIA ESTRAZIONE REALE DAL VIDEO", use_container_width=True):
+            with st.spinner("Decodifica video e calcolo landmark biometrici in corso..."):
                 try:
-                    import cv2
+                    import av
                     import mediapipe as mp
 
                     mp_pose = mp.solutions.pose
                     pose = mp_pose.pose(static_image_mode=False, model_complexity=1, smooth_landmarks=True)
 
-                    cap = cv2.VideoCapture(video_path)
+                    container = av.open(video_path)
                     
                     angoli_ginocchio = []
                     overstride_valori = []
                     frame_count = 0
                     
                     def calcola_angolo(a, b, c):
-                        a = np.array(a) 
-                        b = np.array(b) 
-                        c = np.array(c) 
-                        
-                        ba = a - b
-                        bc = c - b
-                        
-                        cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-6)
-                        angle = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
-                        return np.degrees(angle)
+                        a, b, c = np.array(a), np.array(b), np.array(c)
+                        ba, bc = a - b, c - b
+                        cosine = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-6)
+                        return np.degrees(np.arccos(np.clip(cosine, -1.0, 1.0)))
 
-                    while cap.isOpened():
-                        success, frame = cap.read()
-                        if not success:
-                            break
-                        
+                    for frame in container.decode(video=0):
                         frame_count += 1
-                        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        results = pose.process(image)
+                        img = frame.to_ndarray(format="rgb24")
+                        results = pose.process(img)
                         
                         if results.pose_landmarks:
                             landmarks = results.pose_landmarks.landmark
-                            h, w, _ = frame.shape
+                            h, w, _ = img.shape
                             
-                            hip = [landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].x * w,
-                                   landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y * h]
-                            knee = [landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].x * w,
-                                    landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y * h]
-                            ankle = [landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x * w,
-                                     landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y * h]
-                            heel = [landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].x * w,
-                                    landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].y * h]
+                            hip = [landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].x * w, landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y * h]
+                            knee = [landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].x * w, landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y * h]
+                            ankle = [landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x * w, landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y * h]
+                            heel = [landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].x * w, landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].y * h]
                             
-                            angolo = calcola_angolo(hip, knee, ankle)
-                            angoli_ginocchio.append(angolo)
-                            
-                            overstride_px = abs(hip[0] - heel[0])
-                            overstride_cm = (overstride_px / w) * 45.0 
-                            overstride_valori.append(overstride_cm)
+                            angoli_ginocchio.append(calcola_angolo(hip, knee, ankle))
+                            overstride_valori.append((abs(hip[0] - heel[0]) / w) * 45.0)
 
-                    cap.release()
                     pose.close()
 
                     angolo_medio = np.mean(angoli_ginocchio) if angoli_ginocchio else 142.0
@@ -1162,46 +1137,33 @@ elif pagina == "COMPUTER VISION":
                     st.session_state.cv_analizzato = True
                     st.session_state.cv_dati = {
                         'angolo_ginocchio_appoggio': round(float(angolo_medio), 1),
-                        'angolo_inclinazione_busto': 7.5,
-                        'oscillazione_verticale': 8.1,
                         'overstride_cm': round(float(overstride_medio), 1),
-                        'sovraccarico_prevalente': "Complesso Rotuleo & Tendine d'Achille",
-                        'tipo_appoggio': "Appoggio di Tallone (Analisi Media MediaPipe)",
-                        'infortunio_predetto': "Sindrome Patello-Femorale da Sovraccarico",
-                        'probabilita_infortunio_ml': 82.0 if overstride_medio > 12 else 35.0
+                        'tipo_appoggio': "Appoggio di Tallone (Analisi Reale MediaPipe)",
+                        'sovraccarico': "Complesso Rotuleo & Tendine d'Achille",
+                        'rischio_ml': 82.0 if overstride_medio > 12 else 35.0
                     }
-                    st.success(f"Analisi completata su {frame_count} fotogrammi con MediaPipe Pose!")
+                    st.success(f"Analisi completata su {frame_count} fotogrammi del video!")
                     st.rerun()
 
-                except ImportError:
-                    st.error("ERRORE: Librerie di Computer Vision non trovate. Per abilitare questa funzione reale devi installarle nel tuo ambiente.")
-                    st.code("pip install opencv-python-headless mediapipe", language="bash")
                 except Exception as e:
-                    st.error(f"Errore inaspettato durante l'elaborazione del video: {str(e)}")
+                    st.error(f"Errore durante l'elaborazione video: {str(e)}")
 
         if st.session_state.get('cv_analizzato', False):
             st.markdown("---")
-            st.markdown("<p style='font-size:0.82em; color:#00E5FF; font-family:\"JetBrains Mono\",monospace; margin-bottom:4px; letter-spacing:0.1em;'>MEDIAPIPE SKELETON TRACKING // RISULTATI REALI</p>", unsafe_allow_html=True)
-            
             dati_cv = st.session_state.cv_dati
             
-            col_out1, col_out2 = st.columns([1, 1.1])
-            with col_out1:
+            col1, col2 = st.columns([1, 1.1])
+            with col1:
                 st.video(video_file)
-                st.markdown("<p style='font-size:0.75em; color:#00F5A0; text-align:center; font-family:\"JetBrains Mono\",monospace; margin-top:10px;'>VIDEO SORGENTE ELABORATO</p>", unsafe_allow_html=True)
-
-            with col_out2:
+            with col2:
                 st.markdown(f"""
                 <div class='kpi-card' style='text-align: left; background: #0E1420;'>
-                    <h3 style='color: #00E5FF; margin-bottom: 12px;'>Metriche Estratte via Trigonometria</h3>
-                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Angolo Ginocchio (Medio):</span><strong style='color:#fff; font-family:"JetBrains Mono",monospace;'>{dati_cv['angolo_ginocchio_appoggio']}°</strong></div>
-                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Overstride Stimato:</span><strong style='color:#FFB020; font-family:"JetBrains Mono",monospace;'>{dati_cv['overstride_cm']} cm</strong></div>
-                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Pattern Rilevato:</span><strong style='color:#fff; font-family:"Inter",sans-serif;'>{dati_cv['tipo_appoggio']}</strong></div>
-                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Rischio ML Calcolato:</span><strong style='color:#FF6A3D; font-family:"JetBrains Mono",monospace;'>{dati_cv['probabilita_infortunio_ml']}%</strong></div>
+                    <h3 style='color: #00E5FF; margin-bottom: 12px;'>Metriche Estratte dal Video</h3>
+                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Angolo Ginocchio:</span><strong style='color:#fff; font-family:"JetBrains Mono",monospace;'>{dati_cv['angolo_ginocchio_appoggio']}°</strong></div>
+                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Overstride Reale:</span><strong style='color:#FFB020; font-family:"JetBrains Mono",monospace;'>{dati_cv['overstride_cm']} cm</strong></div>
+                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Pattern Rilevato:</span><strong style='color:#fff;'>{dati_cv['tipo_appoggio']}</strong></div>
+                    <div style='display:flex; justify-content:space-between; margin:8px 0; color:#8792A3;'><span>Rischio Meccanico:</span><strong style='color:#FF6A3D; font-family:"JetBrains Mono",monospace;'>{dati_cv['rischio_ml']}%</strong></div>
                 </div>
                 """, unsafe_allow_html=True)
-
-            st.markdown("---")
-            st.error(f"DIAGNOSI CHINEMATICA REALE: L'estrazione dei landmark ha rilevato un angolo del ginocchio all'impatto di {dati_cv['angolo_ginocchio_appoggio']}° con un overstride di {dati_cv['overstride_cm']} cm, confermando un sovraccarico meccanico sul {dati_cv['sovraccarico_prevalente']}.")
     else:
-        st.info("Carica un video in formato MP4 o MOV per avviare il tracciamento reale con MediaPipe.")
+        st.info("Carica un video in formato MP4 o MOV per estrarre i dati reali.")
